@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel Admin – Filhotes 107MG</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="admin-body">
+
+  <!-- LOGIN -->
+  <div id="loginSection" class="container login-container">
+    <header>
+      <img src="imgs/imglogopag.jpeg" alt="Logo Filhotes" class="logo" />
+      <h1>Painel Administrativo</h1>
+      <p class="subtitle">107MG – Ramo Filhotes</p>
+    </header>
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label for="adminUser">Usuário</label>
+        <input type="text" id="adminUser" placeholder="Usuário" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="adminPass">Senha</label>
+        <input type="password" id="adminPass" placeholder="Senha" autocomplete="current-password" required />
+      </div>
+      <span class="error" id="loginError"></span>
+      <button type="submit" class="btn-submit">Entrar</button>
+    </form>
+  </div>
+
+  <!-- PAINEL -->
+  <div id="adminSection" class="hidden">
+    <div class="admin-topbar">
+      <div class="admin-topbar-left">
+        <img src="imgs/imglogopag.jpeg" alt="Logo" class="logo-sm" />
+        <span>Painel Admin – Filhotes 107MG</span>
+      </div>
+      <button id="btnLogout" class="btn-logout">Sair</button>
+    </div>
+
+    <div class="admin-content">
+      <div class="admin-header-row">
+        <h2>Inscrições Recebidas</h2>
+        <div class="admin-actions">
+          <input type="text" id="searchInput" placeholder="🔍 Buscar por nome..." class="search-input" />
+          <button id="btnExport" class="btn-export">⬇ Exportar CSV</button>
+          <button id="btnClearAll" class="btn-danger">🗑 Limpar Tudo</button>
+        </div>
+      </div>
+
+      <p id="totalCount" class="total-count"></p>
+
+      <div class="table-wrapper">
+        <table id="inscricoesTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Data</th>
+              <th>Responsável</th>
+              <th>Criança</th>
+              <th>Dt. Nascimento</th>
+              <th>Observações</th>
+              <th>Vínculo</th>
+              <th>Telefone</th>
+              <th>E-mail</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <p id="emptyMsg" class="empty-msg hidden">Nenhuma inscrição encontrada.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

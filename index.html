@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Filhotes 107MG – Formulário de Interesse</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/x-icon" href="imgs/imglogopag.jpeg">
+</head>
+<body>
+  <img src="imgs/imgfundoformulario.jpg" alt="Banner Filhotes" class="banner" />
+  <div class="container">
+    <header>
+      <div class="logos">
+        <img src="imgs/imglogosuperiorformulario.jpg" alt="Logo Filhotes" class="logo" />
+        <img src="imgs/imglogopag.jpeg" alt="Logo Escoteiros" class="logo" />
+      </div>
+      <h1>Ramo Filhotes</h1>
+      <p class="subtitle">107MG Grupo Escoteiro Coronel Vicente Torres Júnior.</p>
+      <p class="desc">Formulário de consulta em interesse de matrícula da criança no Ramo Filhotes.<br>
+      Este cadastro é <strong>preliminar</strong> para pais e filhos interessados em compor a Ninhada de Filhotes do 107MG.</p>
+    </header>
+
+    <form id="formFilhotes" novalidate>
+      <div class="field">
+        <label for="nomeResponsavel">1. Nome completo do responsável familiar <span class="req">*</span></label>
+        <small>Pai ou mãe que será o acompanhante da criança em nossos encontros.</small>
+        <input type="text" id="nomeResponsavel" name="nomeResponsavel" placeholder="Nome completo" required autocomplete="name" />
+        <span class="error" id="err-nomeResponsavel"></span>
+      </div>
+
+      <div class="field">
+        <label for="nomeCrianca">2. Nome da criança <span class="req">*</span></label>
+        <small>A criança deve possuir idade de 05 a 07 anos (incompletos).</small>
+        <input type="text" id="nomeCrianca" name="nomeCrianca" placeholder="Nome da criança" required autocomplete="off" />
+        <span class="error" id="err-nomeCrianca"></span>
+      </div>
+
+      <div class="field">
+        <label for="dataNascimento">3. Data de nascimento da criança <span class="req">*</span></label>
+        <input type="date" id="dataNascimento" name="dataNascimento" required />
+        <span class="error" id="err-dataNascimento"></span>
+      </div>
+
+      <div class="field">
+        <label for="observacoes">4. Observações em relação à criança</label>
+        <small>Nesse momento gostaríamos de saber sobre algumas indicações, situações e/ou necessidades especiais da criança que venham a ajudar na iniciação e andamento da progressão do jovem dentro do movimento escoteiro.</small>
+        <textarea id="observacoes" name="observacoes" rows="4" placeholder="Descreva aqui (opcional)"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="vinculo">5. Atual vínculo do responsável com o grupo escoteiro <span class="req">*</span></label>
+        <small>A família já é escoteira, possui proximidade com algum jovem escoteiro ou voluntário? Cite o nome do familiar ou indicação.</small>
+        <textarea id="vinculo" name="vinculo" rows="3" placeholder="Descreva o vínculo ou indicação" required></textarea>
+        <span class="error" id="err-vinculo"></span>
+      </div>
+
+      <div class="field">
+        <label for="telefone">6. Telefone de contato / WhatsApp <span class="req">*</span></label>
+        <small>Atenção: o contato será realizado por este canal.</small>
+        <input type="tel" id="telefone" name="telefone" placeholder="(00) 00000-0000" required autocomplete="tel" maxlength="15" />
+        <span class="error" id="err-telefone"></span>
+      </div>
+
+      <div class="field">
+        <label for="email">7. E-mail para contato <span class="req">*</span></label>
+        <small>Atenção: o contato será realizado por este canal.</small>
+        <input type="email" id="email" name="email" placeholder="seuemail@exemplo.com" required autocomplete="email" />
+        <span class="error" id="err-email"></span>
+      </div>
+
+      <div class="field checkbox-field">
+        <label class="checkbox-label">
+          <input type="checkbox" id="lgpd" required />
+          Concordo com o tratamento dos meus dados pessoais para fins de contato e cadastro no Grupo Escoteiro 107MG, conforme a LGPD (Lei nº 13.709/2018). <span class="req">*</span>
+        </label>
+        <span class="error" id="err-lgpd"></span>
+      </div>
+
+      <button type="submit" class="btn-submit">Enviar Interesse</button>
+    </form>
+
+    <div id="successMsg" class="success-msg hidden">
+      <span>✅</span>
+      <p>Cadastro realizado com sucesso! Entraremos em contato em breve pelo telefone ou e-mail informado.</p>
+    </div>
+  </div>
+
+  <footer>
+    <p>107MG – Grupo Escoteiro Coronel Vicente Torres Júnior &copy; <span id="year"></span></p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
