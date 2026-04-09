@@ -28,10 +28,8 @@ document.getElementById('loginForm').addEventListener('submit', async function (
   errEl.textContent = 'Verificando...';
 
   try {
-    const res  = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'login', user, pass }),
-    });
+    const url  = `${APPS_SCRIPT_URL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`;
+    const res  = await fetch(url);
     const json = await res.json();
 
     if (json.status === 'ok' && json.token) {
@@ -56,17 +54,15 @@ document.getElementById('btnLogout').addEventListener('click', function () {
 let allData = [];
 
 async function loadInscricoes() {
-  const tbody      = document.getElementById('tableBody');
-  const emptyMsg   = document.getElementById('emptyMsg');
+  const tbody    = document.getElementById('tableBody');
+  const emptyMsg = document.getElementById('emptyMsg');
 
   tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#999">Carregando...</td></tr>';
   emptyMsg.classList.add('hidden');
 
   try {
-    const res  = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'getData', token: getSessionToken() }),
-    });
+    const url  = `${APPS_SCRIPT_URL}?action=getData&token=${encodeURIComponent(getSessionToken())}`;
+    const res  = await fetch(url);
     const json = await res.json();
 
     if (json.status === 'unauthorized') {
