@@ -1,27 +1,10 @@
 
-const APPS_SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycby9B_YNikCcouLXPsCBbAHz32LiG1BYyw1Mfsuk-9YgdmlQXGvbFiZSu8ADHQPiYCEU/exec';
-const ADMIN_TOKEN       = 'Filhotes107MG';
-
-const SESSION_KEY = 'filhotes_admin_session';
-
-async function sha256(msg) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-
-const ADMINS = [
-  { user: 'admin',   pass: 'Filhotes@107' },
-  { user: 'ana.losqui@escoteiros.org.br',  pass: 'AdminAna'  },
-  { user: 'diretoria107mg@gmail.com',  pass: 'AdminDireto'  },
-];
-
-let ADMIN_HASHES = [];
-Promise.all(ADMINS.map(a => sha256(a.pass).then(h => ({ user: a.user, hash: h }))))
-  .then(list => { ADMIN_HASHES = list; });
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9B_YNikCcouLXPsCBbAHz32LiG1BYyw1Mfsuk-9YgdmlQXGvbFiZSu8ADHQPiYCEU/exec';
+const SESSION_KEY     = 'filhotes_admin_session';
 
 // ---- Auth ----
-function isLoggedIn() { return sessionStorage.getItem(SESSION_KEY) === '1'; }
+function getSessionToken() { return sessionStorage.getItem(SESSION_KEY); }
+function isLoggedIn()      { return !!getSessionToken(); }
 
 function showPanel() {
   document.getElementById('loginSection').classList.add('hidden');
@@ -41,15 +24,26 @@ document.getElementById('loginForm').addEventListener('submit', async function (
   const user  = document.getElementById('adminUser').value.trim();
   const pass  = document.getElementById('adminPass').value;
   const errEl = document.getElementById('loginError');
-  const hash  = await sha256(pass);
 
-  if (ADMIN_HASHES.some(a => a.user === user && a.hash === hash)) {
-    sessionStorage.setItem(SESSION_KEY, '1');
-    errEl.textContent = '';
-    showPanel();
-  } else {
-    errEl.textContent = 'Usuário ou senha incorretos.';
-    document.getElementById('adminPass').value = '';
+  errEl.textContent = 'Verificando...';
+
+  try {
+    const res  = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', user, pass }),
+    });
+    const json = await res.json();
+
+    if (json.status === 'ok' && json.token) {
+      sessionStorage.setItem(SESSION_KEY, json.token);
+      errEl.textContent = '';
+      showPanel();
+    } else {
+      errEl.textContent = 'Usuário ou senha incorretos.';
+      document.getElementById('adminPass').value = '';
+    }
+  } catch {
+    errEl.textContent = 'Erro ao conectar. Tente novamente.';
   }
 });
 
@@ -62,24 +56,39 @@ document.getElementById('btnLogout').addEventListener('click', function () {
 let allData = [];
 
 async function loadInscricoes() {
-  const tbody     = document.getElementById('tableBody');
-  const emptyMsg  = document.getElementById('emptyMsg');
-  const totalCount = document.getElementById('totalCount');
+  const tbody      = document.getElementById('tableBody');
+  const emptyMsg   = document.getElementById('emptyMsg');
 
-  tbody.innerHTML  = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#999">Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#999">Carregando...</td></tr>';
   emptyMsg.classList.add('hidden');
 
   try {
-    const res  = await fetch(`${APPS_SCRIPT_URL}?token=${encodeURIComponent(ADMIN_TOKEN)}`);
+    const res  = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getData', token: getSessionToken() }),
+    });
     const json = await res.json();
 
-    if (json.status !== 'ok') throw new Error('Não autorizado ou erro no servidor.');
+    if (json.status === 'unauthorized') {
+      sessionStorage.removeItem(SESSION_KEY);
+      showLogin();
+      return;
+    }
+
+    if (json.status !== 'ok') throw new Error('Erro no servidor.');
 
     allData = json.data || [];
     renderTable(document.getElementById('searchInput').value.toLowerCase().trim());
 
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:24px;color:#e53935">Erro ao carregar dados: ${esc(err.message)}</td></tr>`;
+    const td = document.createElement('td');
+    td.colSpan = 10;
+    td.style.cssText = 'text-align:center;padding:24px;color:#e53935';
+    td.textContent = 'Erro ao carregar dados: ' + err.message;
+    const tr = document.createElement('tr');
+    tr.appendChild(td);
+    tbody.innerHTML = '';
+    tbody.appendChild(tr);
   }
 }
 
@@ -114,24 +123,36 @@ function renderTable(filter = '') {
 
   filtered.forEach((r, i) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span class="badge-num">${i + 1}</span></td>
-      <td>${esc(formatDate(r.dataEnvio))}</td>
-      <td>${esc(r.nomeResponsavel)}</td>
-      <td>${esc(r.nomeCrianca)}</td>
-      <td>${esc(r.dataNascimento)}</td>
-      <td>${esc(r.observacoes)}</td>
-      <td>${esc(r.vinculo)}</td>
-      <td>${esc(r.telefone)}</td>
-      <td>${esc(r.email)}</td>
-      <td><a href="https://wa.me/55${String(r.telefone).replace(/\D/g,'')}" target="_blank" class="btn-whatsapp" title="Abrir WhatsApp">💬</a></td>
-    `;
+    const cells = [i + 1, formatDate(r.dataEnvio), r.nomeResponsavel, r.nomeCrianca, r.dataNascimento, r.observacoes, r.vinculo, r.telefone, r.email];
+
+    cells.forEach((val, ci) => {
+      const td = document.createElement('td');
+      if (ci === 0) {
+        const span = document.createElement('span');
+        span.className = 'badge-num';
+        span.textContent = val;
+        td.appendChild(span);
+      } else {
+        td.textContent = val ?? '';
+      }
+      tr.appendChild(td);
+    });
+
+    const tdWa = document.createElement('td');
+    const phone = String(r.telefone).replace(/\D/g, '');
+    if (/^\d{10,11}$/.test(phone)) {
+      const a = document.createElement('a');
+      a.href = `https://wa.me/55${phone}`;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.className = 'btn-whatsapp';
+      a.title = 'Abrir WhatsApp';
+      a.textContent = '💬';
+      tdWa.appendChild(a);
+    }
+    tr.appendChild(tdWa);
     tbody.appendChild(tr);
   });
-}
-
-function esc(str) {
-  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 document.getElementById('searchInput').addEventListener('input', function () {
@@ -139,7 +160,7 @@ document.getElementById('searchInput').addEventListener('input', function () {
 });
 
 document.getElementById('btnExport').addEventListener('click', function () {
-  if (!allData.length) { alert('Nenhuma inscrição para exportar.'); return; }
+  if (!allData.length) { document.getElementById('emptyMsg').classList.remove('hidden'); return; }
 
   const headers = ['#','Data','Responsável','Criança','Dt. Nascimento','Observações','Vínculo','Telefone','E-mail'];
   const rows = allData.map((r, i) => [
@@ -156,7 +177,7 @@ document.getElementById('btnExport').addEventListener('click', function () {
   URL.revokeObjectURL(url);
 });
 
-// Botão atualizar (substitui "Limpar Tudo" — dados ficam na planilha)
+// Botão atualizar
 document.getElementById('btnClearAll').textContent = '🔄 Atualizar';
 document.getElementById('btnClearAll').classList.remove('btn-danger');
 document.getElementById('btnClearAll').classList.add('btn-export');
