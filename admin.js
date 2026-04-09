@@ -2,10 +2,12 @@
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx81EZC_bKDXMdR4tyKeafbxnJhgTwGLV9yn34dnXPwNhZlguFpWB_pK7fr6P15__X0/exec';
 const SESSION_KEY     = 'filhotes_admin_session';
 
+// ---- JSONP (contorna CORS do Apps Script) ----
 function fetchJsonp(params) {
   return new Promise((resolve, reject) => {
     const cbName = '_cb_' + Date.now();
-    const url    = `${APPS_SCRIPT_URL}?${new URLSearchParams({ ...params, callback: cbName })}`;
+    const base   = Object.entries(params).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+    const url    = `${APPS_SCRIPT_URL}?${base}&callback=${cbName}`;
     const script = document.createElement('script');
     const timer  = setTimeout(() => { cleanup(); reject(new Error('Timeout')); }, 10000);
 
