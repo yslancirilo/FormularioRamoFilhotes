@@ -97,13 +97,13 @@ form.addEventListener('submit', async function (e) {
   btnSubmit.textContent = 'Enviando...';
 
   try {
-    await fetchJsonp({ action: 'submit', ...data });
+    fetchJsonp({ action: 'submit', ...data });
+    setTimeout(() => {
+      form.classList.add('hidden');
+      successMsg.classList.remove('hidden');
+    }, 1500);
 
-    form.classList.add('hidden');
-    successMsg.classList.remove('hidden');
-
-  } catch (err) {
-    alert('Erro ao enviar. Verifique sua conexão e tente novamente.');
+  } finally {
     btnSubmit.disabled    = false;
     btnSubmit.textContent = 'Enviar Interesse';
   }
