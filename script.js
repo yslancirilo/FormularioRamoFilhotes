@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4D8pF742eJkHwQkRwGFGtfH5D1ogoUbgOgQYn2kEMUy2tcGW8OX54GdjWsGHDl08E/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzBow1HsexGfS2ZqOHHZxjaK9LK1TZ0zPHTvjtw0oovsH93Qa_ch2754LElgGD1Css/exec';
 
 document.getElementById('year').textContent = new Date().getFullYear();
 
