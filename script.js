@@ -1,4 +1,24 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8rWMbVJxHVOEXi68s47tnbUmOt5SnFR_TFBSiMSKsPO2QaP0W5l-9ZfFVZovDQs5S/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx81EZC_bKDXMdR4tyKeafbxnJhgTwGLV9yn34dnXPwNhZlguFpWB_pK7fr6P15__X0/exec';
+
+function fetchJsonp(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = '_cb_' + Date.now();
+    const url    = `${APPS_SCRIPT_URL}?${new URLSearchParams({ ...params, callback: cbName })}`;
+    const script = document.createElement('script');
+    const timer  = setTimeout(() => { cleanup(); reject(new Error('Timeout')); }, 10000);
+
+    window[cbName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('Erro de rede')); };
+    script.src = url;
+    document.head.appendChild(script);
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      script.remove();
+    }
+  });
+}
 
 document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -77,10 +97,7 @@ form.addEventListener('submit', async function (e) {
   btnSubmit.textContent = 'Enviando...';
 
   try {
-    const params = new URLSearchParams({ action: 'submit', ...data });
-    const res    = await fetch(`${APPS_SCRIPT_URL}?${params}`);
-    const json   = await res.json();
-    if (json.status !== 'ok') throw new Error(json.message || 'Erro desconhecido');
+    await fetchJsonp({ action: 'submit', ...data });
 
     form.classList.add('hidden');
     successMsg.classList.remove('hidden');
