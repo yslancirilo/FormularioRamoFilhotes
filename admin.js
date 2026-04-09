@@ -1,5 +1,5 @@
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9B_YNikCcouLXPsCBbAHz32LiG1BYyw1Mfsuk-9YgdmlQXGvbFiZSu8ADHQPiYCEU/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4D8pF742eJkHwQkRwGFGtfH5D1ogoUbgOgQYn2kEMUy2tcGW8OX54GdjWsGHDl08E/exec';
 const SESSION_KEY     = 'filhotes_admin_session';
 
 // ---- Auth ----
