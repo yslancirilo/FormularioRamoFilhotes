@@ -77,12 +77,9 @@ form.addEventListener('submit', async function (e) {
   btnSubmit.textContent = 'Enviando...';
 
   try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method:  'POST',
-      body:    JSON.stringify(data),
-    });
-
-    const json = await res.json();
+    const params = new URLSearchParams({ action: 'submit', ...data });
+    const res    = await fetch(`${APPS_SCRIPT_URL}?${params}`);
+    const json   = await res.json();
     if (json.status !== 'ok') throw new Error(json.message || 'Erro desconhecido');
 
     form.classList.add('hidden');
