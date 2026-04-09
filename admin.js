@@ -1,16 +1,24 @@
-const APPS_SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycby4D8pF742eJkHwQkRwGFGtfH5D1ogoUbgOgQYn2kEMUy2tcGW8OX54GdjWsGHDl08E/exec';
+
+const APPS_SCRIPT_URL   = 'https://script.google.com/macros/s/AKfycby9B_YNikCcouLXPsCBbAHz32LiG1BYyw1Mfsuk-9YgdmlQXGvbFiZSu8ADHQPiYCEU/exec';
 const ADMIN_TOKEN       = 'Filhotes107MG';
 
-const ADMIN_USER        = 'admin';
-const SESSION_KEY       = 'filhotes_admin_session';
+const SESSION_KEY = 'filhotes_admin_session';
 
 async function sha256(msg) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-let REAL_HASH = '';
-sha256('Filhotes@107').then(h => { REAL_HASH = h; });
+
+const ADMINS = [
+  { user: 'admin',   pass: 'Filhotes@107' },
+  { user: 'ana.losqui@escoteiros.org.br',  pass: 'AdminAna'  },
+  { user: 'diretoria107mg@gmail.com',  pass: 'AdminDireto'  },
+];
+
+let ADMIN_HASHES = [];
+Promise.all(ADMINS.map(a => sha256(a.pass).then(h => ({ user: a.user, hash: h }))))
+  .then(list => { ADMIN_HASHES = list; });
 
 // ---- Auth ----
 function isLoggedIn() { return sessionStorage.getItem(SESSION_KEY) === '1'; }
@@ -35,7 +43,7 @@ document.getElementById('loginForm').addEventListener('submit', async function (
   const errEl = document.getElementById('loginError');
   const hash  = await sha256(pass);
 
-  if (user === ADMIN_USER && hash === REAL_HASH) {
+  if (ADMIN_HASHES.some(a => a.user === user && a.hash === hash)) {
     sessionStorage.setItem(SESSION_KEY, '1');
     errEl.textContent = '';
     showPanel();
