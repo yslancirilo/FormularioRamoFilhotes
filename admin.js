@@ -2,6 +2,27 @@
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx81EZC_bKDXMdR4tyKeafbxnJhgTwGLV9yn34dnXPwNhZlguFpWB_pK7fr6P15__X0/exec';
 const SESSION_KEY     = 'filhotes_admin_session';
 
+// ---- JSONP (contorna CORS do Apps Script) ----
+function fetchJsonp(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = '_cb_' + Date.now();
+    const url    = `${APPS_SCRIPT_URL}?${new URLSearchParams({ ...params, callback: cbName })}`;
+    const script = document.createElement('script');
+    const timer  = setTimeout(() => { cleanup(); reject(new Error('Timeout')); }, 10000);
+
+    window[cbName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('Erro de rede')); };
+    script.src = url;
+    document.head.appendChild(script);
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      script.remove();
+    }
+  });
+}
+
 // ---- Auth ----
 function getSessionToken() { return sessionStorage.getItem(SESSION_KEY); }
 function isLoggedIn()      { return !!getSessionToken(); }
@@ -28,9 +49,7 @@ document.getElementById('loginForm').addEventListener('submit', async function (
   errEl.textContent = 'Verificando...';
 
   try {
-    const url  = `${APPS_SCRIPT_URL}?action=login&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`;
-    const res  = await fetch(url);
-    const json = await res.json();
+    const json = await fetchJsonp({ action: 'login', user, pass });
 
     if (json.status === 'ok' && json.token) {
       sessionStorage.setItem(SESSION_KEY, json.token);
@@ -61,9 +80,7 @@ async function loadInscricoes() {
   emptyMsg.classList.add('hidden');
 
   try {
-    const url  = `${APPS_SCRIPT_URL}?action=getData&token=${encodeURIComponent(getSessionToken())}`;
-    const res  = await fetch(url);
-    const json = await res.json();
+    const json = await fetchJsonp({ action: 'getData', token: getSessionToken() });
 
     if (json.status === 'unauthorized') {
       sessionStorage.removeItem(SESSION_KEY);
