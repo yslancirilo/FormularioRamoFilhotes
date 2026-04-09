@@ -1,5 +1,5 @@
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx81EZC_bKDXMdR4tyKeafbxnJhgTwGLV9yn34dnXPwNhZlguFpWB_pK7fr6P15__X0/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdy7DrqF5ROc9HZEqzZsDSrpERCGoLSQ026QWmYyUNDuyFqD8EEmw_Z4EOBPa2-vqG/exec';
 const SESSION_KEY     = 'filhotes_admin_session';
 
 // ---- JSONP (contorna CORS do Apps Script) ----
