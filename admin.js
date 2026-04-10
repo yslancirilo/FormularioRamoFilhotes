@@ -112,6 +112,12 @@ function formatDate(raw) {
   return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 }
 
+function formatDateOnly(raw) {
+  if (!raw) return '';
+  const [year, month, day] = String(raw).slice(0, 10).split('-');
+  return `${day}/${month}/${year}`;
+}
+
 function renderTable(filter = '') {
   const tbody      = document.getElementById('tableBody');
   const emptyMsg   = document.getElementById('emptyMsg');
@@ -137,7 +143,7 @@ function renderTable(filter = '') {
 
   filtered.forEach((r, i) => {
     const tr = document.createElement('tr');
-    const cells = [i + 1, formatDate(r.dataEnvio), r.nomeResponsavel, r.nomeCrianca, r.dataNascimento, r.observacoes, r.vinculo, r.telefone, r.email];
+    const cells = [i + 1, formatDate(r.dataEnvio), r.nomeResponsavel, r.nomeCrianca, formatDateOnly(r.dataNascimento), r.observacoes, r.vinculo, r.telefone, r.email];
 
     cells.forEach((val, ci) => {
       const td = document.createElement('td');
