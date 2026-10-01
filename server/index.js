@@ -50,7 +50,13 @@ app.get('/api', (req, res) => {
       return res.status(502).json({ status: 'error', message: 'Muitos redirecionamentos.' });
     }
 
-    const request = https.get(targetUrl, (appsRes) => {
+    const parsedUrl = new URL(targetUrl);
+    const options = {
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.pathname + parsedUrl.search,
+      headers: { 'Accept-Encoding': 'identity' },
+    };
+    const request = https.get(options, (appsRes) => {
       // Segue redirects (302/301) que o Apps Script faz
       if ([301, 302, 303, 307, 308].includes(appsRes.statusCode) && appsRes.headers.location) {
         appsRes.resume();
@@ -60,9 +66,10 @@ app.get('/api', (req, res) => {
       let body = '';
       appsRes.on('data', chunk => body += chunk);
       appsRes.on('end', () => {
+        console.log('[API] encoding:', appsRes.headers['content-encoding']);
+        console.log('[API] body:', JSON.stringify(body.slice(0, 300)));
         try {
-          // Remove wrapper JSONP se existir, senão usa JSON puro
-          const json = body.includes('(') 
+          const json = body.includes('(')
             ? body.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '')
             : body;
           res.setHeader('Content-Type', 'application/json');
