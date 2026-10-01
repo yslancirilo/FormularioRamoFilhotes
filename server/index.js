@@ -66,8 +66,6 @@ app.get('/api', (req, res) => {
       let body = '';
       appsRes.on('data', chunk => body += chunk);
       appsRes.on('end', () => {
-        console.log('[API] encoding:', appsRes.headers['content-encoding']);
-        console.log('[API] body:', JSON.stringify(body.slice(0, 300)));
         try {
           const json = body.includes('(')
             ? body.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '')
