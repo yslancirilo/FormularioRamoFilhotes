@@ -37,19 +37,19 @@ function startSessionTimer() {
   }, APP_CONFIG.SESSION_TTL_MS);
 }
 
-// ---- API (proxy no servidor — sem expor URL do Apps Script) ----
 // ---- API (proxy / Apps Script) ----
 async function fetchJsonp(params) {
   const qs = new URLSearchParams(params).toString();
   const res = await fetch(`${APP_CONFIG.APPS_SCRIPT_URL}?${qs}`, {
-    redirect: 'follow', // Força o fetch a seguir o redirecionamento do Google
-    signal: AbortSignal.timeout(APP_CONFIG.REQUEST_TIMEOUT),
+    method: 'GET',
+    redirect: 'follow',
   });
 
+  // Pega a resposta bruta como texto
   let text = await res.text();
   text = text.trim();
 
-  // Se o servidor retornou como callback, ex: callback({...}) ou ( {...} )
+  // Se a resposta vier envolvida por parênteses ou função callback, remove para isolar o JSON
   if (text.startsWith('(') && text.endsWith(')')) {
     text = text.slice(1, -1).trim();
   } else if (/^[a-zA-Z0-9_]+\s*\(/[cite: 2].test(text)) {
@@ -59,7 +59,8 @@ async function fetchJsonp(params) {
   try {
     return JSON.parse(text);
   } catch (err) {
-    throw new Error('Erro ao processar JSON. O servidor retornou: ' + text.slice(0, 150));
+    console.error('Conteúdo recebido que gerou o erro:', text);
+    throw new Error('Falha ao interpretar resposta do servidor.');
   }
 }
 
