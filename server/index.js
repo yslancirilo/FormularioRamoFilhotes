@@ -69,7 +69,8 @@ app.get('/api', (req, res) => {
           const raw = body.includes('(')
             ? body.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '')
             : body;
-          const parsed = JSON.parse(raw);
+          let parsed = JSON.parse(raw);
+          if (typeof parsed === 'string') parsed = JSON.parse(parsed);
           res.json(parsed);
         } catch (e) {
           console.log('[API] parse error:', e.message);
