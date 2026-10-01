@@ -67,13 +67,13 @@ app.get('/api', (req, res) => {
       appsRes.on('data', chunk => body += chunk);
       appsRes.on('end', () => {
         try {
-          const json = body.includes('(')
+          const raw = body.includes('(')
             ? body.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '')
             : body;
-          res.setHeader('Content-Type', 'application/json');
-          res.send(json);
+          const parsed = JSON.parse(raw);
+          res.json(parsed);
         } catch (e) {
-          res.status(500).json({ status: 'error', message: 'Resposta inválida do servidor.' });
+          res.status(500).json({ status: 'error', message: 'Resposta inválida: ' + e.message });
         }
       });
     });
