@@ -4,6 +4,7 @@ const https   = require('https');
 const path    = require('path');
 
 const app  = express();
+app.set('etag', false);
 const PORT = process.env.PORT || 3000;
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
 const ADMIN_SECRET    = process.env.ADMIN_SECRET;
@@ -32,6 +33,8 @@ app.get('/admin', (req, res) => {
 
 // Proxy para o Apps Script — browser nunca vê a URL real
 app.get('/api', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
   const allowed = ['login', 'getData', 'submit'];
   const action  = req.query.action;
 
