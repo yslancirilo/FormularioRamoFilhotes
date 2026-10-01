@@ -1,21 +1,3 @@
-// ---- JWT (validação no frontend) ----
-function parseJwt(token) {
-  try {
-    const payload = token.split('.')[1];
-    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-  } catch {
-    return null;
-  }
-}
-
-function isTokenExpired(token) {
-  const payload = parseJwt(token);
-  if (!payload) return true;
-  // Verifica expiração do JWT (campo exp em segundos)
-  if (payload.exp && Date.now() / 1000 > payload.exp) return true;
-  return false;
-}
-
 // ---- Sessão com TTL (LGPD: tempo limitado de acesso) ----
 function saveSession(token) {
   const session = { token, savedAt: Date.now() };
@@ -27,13 +9,7 @@ function getSessionToken() {
     const raw = sessionStorage.getItem(APP_CONFIG.SESSION_KEY);
     if (!raw) return null;
     const { token, savedAt } = JSON.parse(raw);
-    // Expiração local por TTL
     if (Date.now() - savedAt > APP_CONFIG.SESSION_TTL_MS) {
-      clearSession();
-      return null;
-    }
-    // Expiração pelo campo exp do JWT
-    if (isTokenExpired(token)) {
       clearSession();
       return null;
     }
@@ -100,11 +76,6 @@ document.getElementById('loginForm').addEventListener('submit', async function (
     const json = await fetchJsonp({ action: 'login', user, pass });
 
     if (json.status === 'ok' && json.token) {
-      // Valida se o token recebido é um JWT válido e não expirado
-      if (isTokenExpired(json.token)) {
-        errEl.textContent = 'Token inválido recebido do servidor.';
-        return;
-      }
       saveSession(json.token);
       errEl.textContent = '';
       document.getElementById('adminPass').value = ''; // LGPD: não manter senha em memória
