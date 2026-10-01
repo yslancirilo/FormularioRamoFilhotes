@@ -73,6 +73,7 @@ app.get('/api', (req, res) => {
           const parsed = JSON.parse(raw);
           res.json(parsed);
         } catch (e) {
+          console.log('[API] parse error:', e.message, '| body inicio:', Buffer.from(body).slice(0,50));
           res.status(500).json({ status: 'error', message: 'Resposta inválida: ' + e.message });
         }
       });

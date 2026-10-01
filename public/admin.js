@@ -43,8 +43,12 @@ async function fetchJsonp(params) {
   const res = await fetch(`${APP_CONFIG.APPS_SCRIPT_URL}?${qs}`, {
     signal: AbortSignal.timeout(APP_CONFIG.REQUEST_TIMEOUT),
   });
-  if (!res.ok) throw new Error('Erro de rede');
-  return res.json();
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('JSON inválido: ' + text.slice(0, 200));
+  }
 }
 
 // ---- UI ----
@@ -84,8 +88,8 @@ document.getElementById('loginForm').addEventListener('submit', async function (
       errEl.textContent = 'Usuário ou senha incorretos.';
       document.getElementById('adminPass').value = '';
     }
-  } catch {
-    errEl.textContent = 'Erro ao conectar. Tente novamente.';
+  } catch (err) {
+    errEl.textContent = 'Erro ao conectar. Tente novamente. Detalhe: ' + (err.message || err);
   }
 });
 
@@ -106,7 +110,7 @@ async function loadInscricoes() {
   const tbody    = document.getElementById('tableBody');
   const emptyMsg = document.getElementById('emptyMsg');
 
-  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#999">Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10" class="td-loading">Carregando...</td></tr>';
   emptyMsg.classList.add('hidden');
 
   try {
@@ -126,8 +130,8 @@ async function loadInscricoes() {
   } catch (err) {
     const td = document.createElement('td');
     td.colSpan = 10;
-    td.style.cssText = 'text-align:center;padding:24px;color:#e53935';
-    td.textContent = 'Erro ao carregar dados: ' + err.message;
+    td.className = 'td-error';
+    td.textContent = 'Erro ao carregar dados: ' + (err.message || err);
     const tr = document.createElement('tr');
     tr.appendChild(td);
     tbody.innerHTML = '';
