@@ -6,14 +6,29 @@ const path    = require('path');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
+const ADMIN_SECRET    = process.env.ADMIN_SECRET;
 
-if (!APPS_SCRIPT_URL) {
-  console.error('ERRO: APPS_SCRIPT_URL não definida no .env');
+if (!APPS_SCRIPT_URL || !ADMIN_SECRET) {
+  console.error('ERRO: APPS_SCRIPT_URL e ADMIN_SECRET devem estar definidas no .env');
   process.exit(1);
 }
 
+// Bloqueia acesso direto ao admin.html
+app.use((req, res, next) => {
+  if (req.path === '/admin.html') return res.status(404).send('Not found');
+  next();
+});
+
 // Serve os arquivos estáticos do frontend
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Rota protegida do painel admin — exige ?secret=ADMIN_SECRET na URL
+app.get('/admin', (req, res) => {
+  if (req.query.secret !== ADMIN_SECRET) {
+    return res.status(401).send('Acesso negado.');
+  }
+  res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
+});
 
 // Proxy para o Apps Script — browser nunca vê a URL real
 app.get('/api', (req, res) => {
