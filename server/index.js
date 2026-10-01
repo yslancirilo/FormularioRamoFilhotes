@@ -42,7 +42,7 @@ app.get('/api', (req, res) => {
   const params   = new URLSearchParams(req.query).toString();
   const url      = `${APPS_SCRIPT_URL}?${params}`;
 
-  https.get(url, (appsRes) => {
+  const request = https.get(url, (appsRes) => {
     let body = '';
     appsRes.on('data', chunk => body += chunk);
     appsRes.on('end', () => {
@@ -55,8 +55,16 @@ app.get('/api', (req, res) => {
         res.status(500).json({ status: 'error', message: 'Resposta inválida do servidor.' });
       }
     });
-  }).on('error', () => {
-    res.status(502).json({ status: 'error', message: 'Erro ao conectar com o servidor.' });
+  });
+
+  request.setTimeout(25000, () => {
+    request.destroy();
+    res.status(504).json({ status: 'error', message: 'Tempo limite excedido. Tente novamente.' });
+  });
+
+  request.on('error', (err) => {
+    if (!res.headersSent)
+      res.status(502).json({ status: 'error', message: 'Erro ao conectar com o servidor: ' + err.message });
   });
 });
 
