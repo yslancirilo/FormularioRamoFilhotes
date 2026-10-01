@@ -1,24 +1,10 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbykLr-H2l-N9yN6vyWV4xx2i_9FVLjPHyEi6fa1stl6rgOpVdWtteiP20XQWca6OK_Deg/exec';
-
-function fetchJsonp(params) {
-  return new Promise((resolve, reject) => {
-    const cbName = '_cb_' + Date.now();
-    const base   = Object.entries(params).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
-    const url    = `${APPS_SCRIPT_URL}?${base}&callback=${cbName}`;
-    const script = document.createElement('script');
-    const timer  = setTimeout(() => { cleanup(); reject(new Error('Timeout')); }, 10000);
-
-    window[cbName] = (data) => { cleanup(); resolve(data); };
-    script.onerror = () => { cleanup(); reject(new Error('Erro de rede')); };
-    script.src = url;
-    document.head.appendChild(script);
-
-    function cleanup() {
-      clearTimeout(timer);
-      delete window[cbName];
-      script.remove();
-    }
+async function fetchJsonp(params) {
+  const qs  = new URLSearchParams(params).toString();
+  const res = await fetch(`${APP_CONFIG.APPS_SCRIPT_URL}?${qs}`, {
+    signal: AbortSignal.timeout(APP_CONFIG.REQUEST_TIMEOUT),
   });
+  if (!res.ok) throw new Error('Erro de rede');
+  return res.json();
 }
 
 document.getElementById('year').textContent = new Date().getFullYear();

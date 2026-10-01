@@ -1,46 +1,93 @@
-
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbykLr-H2l-N9yN6vyWV4xx2i_9FVLjPHyEi6fa1stl6rgOpVdWtteiP20XQWca6OK_Deg/exec';
-const SESSION_KEY     = 'filhotes_admin_session';
-
-// ---- JSONP (contorna CORS do Apps Script) ----
-function fetchJsonp(params) {
-  return new Promise((resolve, reject) => {
-    const cbName = '_cb_' + Date.now();
-    const base   = Object.entries(params).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
-    const url    = `${APPS_SCRIPT_URL}?${base}&callback=${cbName}`;
-    const script = document.createElement('script');
-    const timer  = setTimeout(() => { cleanup(); reject(new Error('Timeout')); }, 10000);
-
-    window[cbName] = (data) => { cleanup(); resolve(data); };
-    script.onerror = () => { cleanup(); reject(new Error('Erro de rede')); };
-    script.src = url;
-    document.head.appendChild(script);
-
-    function cleanup() {
-      clearTimeout(timer);
-      delete window[cbName];
-      script.remove();
-    }
-  });
+// ---- JWT (validação no frontend) ----
+function parseJwt(token) {
+  try {
+    const payload = token.split('.')[1];
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return null;
+  }
 }
 
-// ---- Auth ----
-function getSessionToken() { return sessionStorage.getItem(SESSION_KEY); }
-function isLoggedIn()      { return !!getSessionToken(); }
+function isTokenExpired(token) {
+  const payload = parseJwt(token);
+  if (!payload) return true;
+  // Verifica expiração do JWT (campo exp em segundos)
+  if (payload.exp && Date.now() / 1000 > payload.exp) return true;
+  return false;
+}
 
+// ---- Sessão com TTL (LGPD: tempo limitado de acesso) ----
+function saveSession(token) {
+  const session = { token, savedAt: Date.now() };
+  sessionStorage.setItem(APP_CONFIG.SESSION_KEY, JSON.stringify(session));
+}
+
+function getSessionToken() {
+  try {
+    const raw = sessionStorage.getItem(APP_CONFIG.SESSION_KEY);
+    if (!raw) return null;
+    const { token, savedAt } = JSON.parse(raw);
+    // Expiração local por TTL
+    if (Date.now() - savedAt > APP_CONFIG.SESSION_TTL_MS) {
+      clearSession();
+      return null;
+    }
+    // Expiração pelo campo exp do JWT
+    if (isTokenExpired(token)) {
+      clearSession();
+      return null;
+    }
+    return token;
+  } catch {
+    clearSession();
+    return null;
+  }
+}
+
+function clearSession() {
+  sessionStorage.removeItem(APP_CONFIG.SESSION_KEY);
+}
+
+function isLoggedIn() { return !!getSessionToken(); }
+
+// Expiração automática de sessão (LGPD: não manter dados além do necessário)
+let sessionTimer = null;
+function startSessionTimer() {
+  clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => {
+    clearSession();
+    showLogin();
+    document.getElementById('loginError').textContent = 'Sessão expirada. Faça login novamente.';
+  }, APP_CONFIG.SESSION_TTL_MS);
+}
+
+// ---- API (proxy no servidor — sem expor URL do Apps Script) ----
+async function fetchJsonp(params) {
+  const qs  = new URLSearchParams(params).toString();
+  const res = await fetch(`${APP_CONFIG.APPS_SCRIPT_URL}?${qs}`, {
+    signal: AbortSignal.timeout(APP_CONFIG.REQUEST_TIMEOUT),
+  });
+  if (!res.ok) throw new Error('Erro de rede');
+  return res.json();
+}
+
+// ---- UI ----
 function showPanel() {
   document.getElementById('loginSection').classList.add('hidden');
   document.getElementById('adminSection').classList.remove('hidden');
+  startSessionTimer();
   loadInscricoes();
 }
 
 function showLogin() {
+  clearTimeout(sessionTimer);
   document.getElementById('loginSection').classList.remove('hidden');
   document.getElementById('adminSection').classList.add('hidden');
 }
 
 if (isLoggedIn()) showPanel();
 
+// ---- Login ----
 document.getElementById('loginForm').addEventListener('submit', async function (e) {
   e.preventDefault();
   const user  = document.getElementById('adminUser').value.trim();
@@ -53,8 +100,14 @@ document.getElementById('loginForm').addEventListener('submit', async function (
     const json = await fetchJsonp({ action: 'login', user, pass });
 
     if (json.status === 'ok' && json.token) {
-      sessionStorage.setItem(SESSION_KEY, json.token);
+      // Valida se o token recebido é um JWT válido e não expirado
+      if (isTokenExpired(json.token)) {
+        errEl.textContent = 'Token inválido recebido do servidor.';
+        return;
+      }
+      saveSession(json.token);
       errEl.textContent = '';
+      document.getElementById('adminPass').value = ''; // LGPD: não manter senha em memória
       showPanel();
     } else {
       errEl.textContent = 'Usuário ou senha incorretos.';
@@ -66,7 +119,9 @@ document.getElementById('loginForm').addEventListener('submit', async function (
 });
 
 document.getElementById('btnLogout').addEventListener('click', function () {
-  sessionStorage.removeItem(SESSION_KEY);
+  clearSession();
+  allData = []; // LGPD: limpa dados pessoais da memória ao sair
+  document.getElementById('tableBody').innerHTML = '';
   showLogin();
 });
 
@@ -74,6 +129,9 @@ document.getElementById('btnLogout').addEventListener('click', function () {
 let allData = [];
 
 async function loadInscricoes() {
+  const token = getSessionToken();
+  if (!token) { showLogin(); return; }
+
   const tbody    = document.getElementById('tableBody');
   const emptyMsg = document.getElementById('emptyMsg');
 
@@ -81,10 +139,10 @@ async function loadInscricoes() {
   emptyMsg.classList.add('hidden');
 
   try {
-    const json = await fetchJsonp({ action: 'getData', token: getSessionToken() });
+    const json = await fetchJsonp({ action: 'getData', token });
 
     if (json.status === 'unauthorized') {
-      sessionStorage.removeItem(SESSION_KEY);
+      clearSession();
       showLogin();
       return;
     }
@@ -132,13 +190,9 @@ function renderTable(filter = '') {
     : allData;
 
   totalCount.textContent = `Total: ${allData.length} inscrição(ões)${filter ? ` — ${filtered.length} encontrada(s)` : ''}`;
-
   tbody.innerHTML = '';
 
-  if (filtered.length === 0) {
-    emptyMsg.classList.remove('hidden');
-    return;
-  }
+  if (filtered.length === 0) { emptyMsg.classList.remove('hidden'); return; }
   emptyMsg.classList.add('hidden');
 
   filtered.forEach((r, i) => {
@@ -182,17 +236,17 @@ document.getElementById('searchInput').addEventListener('input', function () {
 document.getElementById('btnExport').addEventListener('click', function () {
   if (!allData.length) { document.getElementById('emptyMsg').classList.remove('hidden'); return; }
 
-  const headers = ['#','Data','Responsável','Criança','Dt. Nascimento','Observações','Vínculo','Telefone','E-mail'];
+  const headers = ['#', 'Data', 'Responsável', 'Criança', 'Dt. Nascimento', 'Observações', 'Vínculo', 'Telefone', 'E-mail'];
   const rows = allData.map((r, i) => [
     i + 1, r.dataEnvio, r.nomeResponsavel, r.nomeCrianca, r.dataNascimento, r.observacoes, r.vinculo, r.telefone, r.email,
-  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'));
+  ].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';'));
 
   const csv  = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `inscricoes-filhotes-${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `inscricoes-filhotes-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 });
