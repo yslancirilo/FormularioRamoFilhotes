@@ -45,30 +45,47 @@ app.get('/api', (req, res) => {
   const params   = new URLSearchParams(req.query).toString();
   const url      = `${APPS_SCRIPT_URL}?${params}`;
 
-  const request = https.get(url, (appsRes) => {
-    let body = '';
-    appsRes.on('data', chunk => body += chunk);
-    appsRes.on('end', () => {
-      try {
-        // Apps Script retorna JSONP: callback({...}) — extrai o JSON puro
-        const json = body.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '');
-        res.setHeader('Content-Type', 'application/json');
-        res.send(json);
-      } catch {
-        res.status(500).json({ status: 'error', message: 'Resposta inválida do servidor.' });
+  function doRequest(targetUrl, redirectCount = 0) {
+    if (redirectCount > 5) {
+      return res.status(502).json({ status: 'error', message: 'Muitos redirecionamentos.' });
+    }
+
+    const request = https.get(targetUrl, (appsRes) => {
+      // Segue redirects (302/301) que o Apps Script faz
+      if ([301, 302, 303, 307, 308].includes(appsRes.statusCode) && appsRes.headers.location) {
+        appsRes.resume();
+        return doRequest(appsRes.headers.location, redirectCount + 1);
       }
+
+      let body = '';
+      appsRes.on('data', chunk => body += chunk);
+      appsRes.on('end', () => {
+        try {
+          // Remove wrapper JSONP se existir, senão usa JSON puro
+          const json = body.includes('(') 
+            ? body.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '')
+            : body;
+          res.setHeader('Content-Type', 'application/json');
+          res.send(json);
+        } catch (e) {
+          res.status(500).json({ status: 'error', message: 'Resposta inválida do servidor.' });
+        }
+      });
     });
-  });
 
-  request.setTimeout(25000, () => {
-    request.destroy();
-    res.status(504).json({ status: 'error', message: 'Tempo limite excedido. Tente novamente.' });
-  });
+    request.setTimeout(25000, () => {
+      request.destroy();
+      if (!res.headersSent)
+        res.status(504).json({ status: 'error', message: 'Tempo limite excedido. Tente novamente.' });
+    });
 
-  request.on('error', (err) => {
-    if (!res.headersSent)
-      res.status(502).json({ status: 'error', message: 'Erro ao conectar com o servidor: ' + err.message });
-  });
+    request.on('error', (err) => {
+      if (!res.headersSent)
+        res.status(502).json({ status: 'error', message: 'Erro ao conectar: ' + err.message });
+    });
+  }
+
+  doRequest(url);
 });
 
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
