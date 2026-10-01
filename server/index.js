@@ -14,16 +14,13 @@ if (!APPS_SCRIPT_URL || !ADMIN_SECRET) {
   process.exit(1);
 }
 
-// Bloqueia acesso direto ao admin.html
 app.use((req, res, next) => {
   if (req.path === '/admin.html') return res.status(404).send('Not found');
   next();
 });
 
-// Serve os arquivos estáticos do frontend
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Rota protegida do painel admin — exige ?secret=ADMIN_SECRET na URL
 app.get('/admin', (req, res) => {
   if (req.query.secret !== ADMIN_SECRET) {
     return res.status(401).send('Acesso negado.');
@@ -31,10 +28,10 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 
-// Proxy para o Apps Script — browser nunca vê a URL real
 app.get('/api', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Pragma', 'no-cache');
+
   const allowed = ['login', 'getData', 'submit'];
   const action  = req.query.action;
 
@@ -42,8 +39,8 @@ app.get('/api', (req, res) => {
     return res.status(400).json({ status: 'error', message: 'Ação inválida.' });
   }
 
-  const params   = new URLSearchParams(req.query).toString();
-  const url      = `${APPS_SCRIPT_URL}?${params}`;
+  const params = new URLSearchParams(req.query).toString();
+  const url    = `${APPS_SCRIPT_URL}?${params}`;
 
   function doRequest(targetUrl, redirectCount = 0) {
     if (redirectCount > 5) {
@@ -56,16 +53,18 @@ app.get('/api', (req, res) => {
       path: parsedUrl.pathname + parsedUrl.search,
       headers: { 'Accept-Encoding': 'identity' },
     };
+
     const request = https.get(options, (appsRes) => {
-      // Segue redirects (302/301) que o Apps Script faz
       if ([301, 302, 303, 307, 308].includes(appsRes.statusCode) && appsRes.headers.location) {
         appsRes.resume();
         return doRequest(appsRes.headers.location, redirectCount + 1);
       }
 
-      let body = '';
-      appsRes.on('data', chunk => body += chunk);
+      const chunks = [];
+      appsRes.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
       appsRes.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8');
+        console.log('[API] body completo:', JSON.stringify(body));
         try {
           const raw = body.includes('(')
             ? body.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '')
@@ -73,7 +72,7 @@ app.get('/api', (req, res) => {
           const parsed = JSON.parse(raw);
           res.json(parsed);
         } catch (e) {
-          console.log('[API] parse error:', e.message, '| body inicio:', Buffer.from(body).slice(0,50));
+          console.log('[API] parse error:', e.message);
           res.status(500).json({ status: 'error', message: 'Resposta inválida: ' + e.message });
         }
       });
@@ -82,7 +81,7 @@ app.get('/api', (req, res) => {
     request.setTimeout(25000, () => {
       request.destroy();
       if (!res.headersSent)
-        res.status(504).json({ status: 'error', message: 'Tempo limite excedido. Tente novamente.' });
+        res.status(504).json({ status: 'error', message: 'Tempo limite excedido.' });
     });
 
     request.on('error', (err) => {
