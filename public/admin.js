@@ -52,7 +52,7 @@ async function fetchJsonp(params) {
   // Se a resposta vier envolvida por parênteses ou função callback, remove para isolar o JSON
   if (text.startsWith('(') && text.endsWith(')')) {
     text = text.slice(1, -1).trim();
-  } else if (/^[a-zA-Z0-9_]+\s*\(/[cite: 2].test(text)) {
+  } else if (/^[a-zA-Z0-9_]+\s*\(/.test(text)) {
     text = text.substring(text.indexOf('(') + 1, text.lastIndexOf(')')).trim();
   }
 
